@@ -1,0 +1,61 @@
+<?php
+
+function ace_editor_form_alter(&$form, &$form_state, $form_id){
+	$module_path = drupal_get_path('module', 'ace_editor');
+
+	drupal_add_js($module_path.'/scripts/ace.js');
+	drupal_add_js($module_path.'/scripts/ace_init.js');
+	drupal_add_css($module_path.'/styles/ace.css');
+}
+
+function ace_editor_enable() {
+  $format_exists = (bool) db_query_range('SELECT 1 FROM {filter_format} WHERE name = :name', 0, 1, array(':name' => 'ACE Editor'))->fetchField();
+  // Add a PHP code text format, if it does not exist. Do this only for the
+  // first install (or if the format has been manually deleted) as there is no
+  // reliable method to identify the format in an uninstall hook or in
+  // subsequent clean installs.
+  if (!$format_exists) {
+    $ace_editor = array(
+      'format' => 'ace_editor',
+      'name' => 'ACE Editor',
+      // 'Plain text' format is installed with a weight of 10 by default. Use a
+      // higher weight here to ensure that this format will not be the default
+      // format for anyone.
+      'weight' => 11,
+      'filters' => array(
+        // Enable the PHP evaluator filter.
+        'ace_editor' => array(
+          'weight' => 0,
+          'status' => 1,
+        ),
+      ),
+    );
+    $ace_editor = (object) $ace_editor;
+    filter_format_save($ace_editor);
+  }
+}
+
+/**
+ * Implements hook_filter_FILTER_tips().
+ *
+ * @see php_filter_info()
+ */
+function _ace_editor_filter_tips($filter, $format, $long = FALSE) {
+  return t('You may post HTML code.');
+}
+
+function ace_editor_filter_info() {
+  $filters['ace_editor'] = array(
+    'title' => t('ACE Editor'),
+    'description' => t('Write HTML using ACE Editor.'),
+    'process callback' => '_ace_editor_filter_process',
+    'tips callback' => '_ace_editor_filter_tips'
+  );
+  return $filters;
+}
+
+function _ace_editor_filter_process($code) {
+  return $code;
+}
+
+?>
